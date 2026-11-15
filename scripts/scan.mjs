@@ -54,6 +54,13 @@ function humanText(msg) {
 }
 
 const LONG_TOOLS = new Set(['Agent', 'Task', 'Workflow', 'Monitor'])
+// A dev server started in the background never ends and the session does not wait for it,
+// so it must not count as work in progress (unlike a CI watch, a test run or a build).
+const SERVER_RE =
+  /--port\b|\buvicorn\b|http\.server|start:local|\b(vite|astro) (dev|preview)\b|\bpnpm (--filter \S+ )?(run )?(dev|preview|start)(:(?!push)[\w-]+)?(\s|$)/
+function isServer(t) {
+  return /^(Bash|PowerShell)$/.test(t.name) && SERVER_RE.test(String(t.input?.command ?? ''))
+}
 
 const TOOL_LABEL = {
   Bash: 'Terminal',
@@ -146,7 +153,7 @@ function scanFile(file, stat, project) {
           const r = o.toolUseResult
           const bgId = r?.backgroundTaskId ?? (r?.isAsync && r?.agentId ? r.agentId : undefined)
           const started = pendingTools.get(b.tool_use_id)
-          if (bgId && started) {
+          if (bgId && started && !isServer(started)) {
             background.set(bgId, { summary: toolSummary(started.name, started.input), at })
           }
           pendingTools.delete(b.tool_use_id)
