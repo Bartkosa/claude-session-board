@@ -8,7 +8,8 @@ const TITLE = 'Sessions'
 const HOURS = 24
 const EVERY_MS = 5000
 const RECENT_MS = 5 * 3600_000 // sessions active in the last 5 h always stay visible under "Recent"
-const TITLE_MAX = 24
+const TITLE_MAX = 20 // upper bound; a narrow panel gets shorter titles (see titleMax)
+const TITLE_MIN = 10
 const BADGE_WIDTH = 4 // fits "49m", "10h"
 
 const scan = atom({ plugin: 'session-board', key: 'scan' } as const, { at: 0, sessions: [] } as Scan, {
@@ -153,6 +154,10 @@ export const register: Register = on => {
     const now = await $.clock.now()
     // The session this panel is open in (id = transcript name) gets a highlighted button.
     const selfId = await $.session.id().catch(() => '')
+    // The desktop button never wraps its label, so the title is cut to what the panel's width
+    // leaves after the badge and the ✓ button. Button text is wider than a cell, hence the 0.75.
+    const columns = e.viewport?.columns ?? 40
+    const titleMax = Math.max(TITLE_MIN, Math.min(TITLE_MAX, Math.floor((columns - BADGE_WIDTH - 10) * 0.75)))
 
     const groups = ORDER.map(state => ({
       state,
@@ -175,10 +180,10 @@ export const register: Register = on => {
               </Text>
             </Box>
             {/* The desktop app draws only a Button's label; the box grows so the ✓ buttons line up on the right. */}
-            <Box flexGrow={1} flexShrink={1}>
+            <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
               <Button
                 key={`open-${s.id}`}
-                label={cut(s.title, TITLE_MAX) ?? s.title}
+                label={cut(s.title, titleMax) ?? s.title}
                 variant={s.id === selfId ? 'primary' : undefined}
                 dimColor={s.id !== selfId && (s.state === 'done' || s.state === 'archived')}
                 onPress={() => openSession($, s.localId)}

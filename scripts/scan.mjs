@@ -141,7 +141,10 @@ function scanFile(file, stat, project) {
       if (Array.isArray(content)) {
         for (const b of content) {
           if (b.type !== 'tool_result') continue
-          const bgId = o.toolUseResult?.backgroundTaskId
+          // Background shell commands report backgroundTaskId; background subagents report isAsync + agentId.
+          // Both end with a <task-notification> carrying that id.
+          const r = o.toolUseResult
+          const bgId = r?.backgroundTaskId ?? (r?.isAsync && r?.agentId ? r.agentId : undefined)
           const started = pendingTools.get(b.tool_use_id)
           if (bgId && started) {
             background.set(bgId, { summary: toolSummary(started.name, started.input), at })
