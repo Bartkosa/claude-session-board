@@ -1,0 +1,13 @@
+{
+  "name": "claude-session-board",
+  "description": "Session Board: a side panel showing all your Claude Code desktop sessions at a glance.",
+  "owner": {
+    "name": "Bartkosa"
+  },
+  "plugins": [
+    {
+      "name": "session-board",
+      "source": "./"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "session-board",
+  "version": "0.1.0",
+  "description": "A side panel for the Claude Code desktop app that shows every session at a glance: which are working, which need you, and which are done.",
+  "author": {
+    "name": "Bartkosa",
+    "url": "https://github.com/Bartkosa"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
