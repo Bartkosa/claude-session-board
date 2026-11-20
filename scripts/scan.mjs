@@ -156,6 +156,10 @@ function scanFile(file, stat, project) {
           if (bgId && started && !isServer(started)) {
             background.set(bgId, { summary: toolSummary(started.name, started.input), at })
           }
+          // A task stopped with TaskStop sends no <task-notification>, so it ends here.
+          if (started?.name === 'TaskStop' && !b.is_error) {
+            background.delete(String(r?.task_id ?? started.input.task_id ?? started.input.shell_id))
+          }
           pendingTools.delete(b.tool_use_id)
         }
       }
