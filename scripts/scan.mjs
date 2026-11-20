@@ -276,6 +276,8 @@ function loadDesktop() {
               isArchived: !!o.isArchived,
               focusedAt: o.lastFocusedAt ?? 0,
               turnEdgeAt: o.lastTurnEdgeAt ?? 0,
+              // The session that started this one (start_session) or that it was forked from.
+              parentLocalId: o.spawnedFrom?.sessionId ?? o.forkedFromSessionId ?? undefined,
             })
           }
         } catch {}
@@ -317,6 +319,7 @@ for (const dir of fs.readdirSync(ROOT, { withFileTypes: true })) {
       const row = scanFile(file, stat, dir.name)
       if (d) {
         row.localId = d.localId
+        row.parentLocalId = d.parentLocalId
         if (d.title) row.title = d.title
         // Finished after you last opened the session = not seen yet.
         if (row.state === 'done' && d.turnEdgeAt > d.focusedAt) row.state = 'fresh'
@@ -332,5 +335,14 @@ for (const dir of fs.readdirSync(ROOT, { withFileTypes: true })) {
   }
 }
 out.sort((a, b) => b.lastActiveMs - a.lastActiveMs)
+
+// A sub-session keeps its parent only while the parent is on the board too (not archived in the
+// app, active in the scan window); otherwise it is listed as a session of its own.
+const byLocalId = new Map(out.filter(r => r.localId).map(r => [r.localId, r]))
+for (const row of out) {
+  const parent = row.parentLocalId && row.parentLocalId !== row.localId ? byLocalId.get(row.parentLocalId) : undefined
+  if (parent) row.parentTitle = parent.title
+  else delete row.parentLocalId
+}
 
 process.stdout.write(JSON.stringify({ at: now, sessions: out, marksFile: MARKS_FILE }))

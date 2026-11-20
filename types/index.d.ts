@@ -4,6 +4,9 @@ export type SessionState = 'waiting' | 'working' | 'fresh' | 'done' | 'archived'
 export type SessionRow = {
   id: string
   localId?: string
+  // Set only for a sub-session whose parent (the session that started or forked it) is on the board.
+  parentLocalId?: string
+  parentTitle?: string
   title: string
   project?: string
   state: SessionState

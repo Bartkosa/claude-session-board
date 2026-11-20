@@ -70,6 +70,25 @@ function cut(text: string | undefined, n: number): string | undefined {
   return one.length > n ? `${one.slice(0, n - 1)}…` : one
 }
 
+// Sub-sessions go right under their parent when both are in the same list; `level` is the depth
+// of that nesting. A sub-session whose parent is listed elsewhere stays at level 0.
+function arrange(rows: SessionRow[]): { s: SessionRow; level: number }[] {
+  const listed = new Set(rows.map(r => r.localId).filter(Boolean))
+  const isNested = (r: SessionRow) => !!r.parentLocalId && listed.has(r.parentLocalId)
+  const out: { s: SessionRow; level: number }[] = []
+  const seen = new Set<string>()
+  const add = (s: SessionRow, level: number) => {
+    if (seen.has(s.id)) return
+    seen.add(s.id)
+    out.push({ s, level })
+    if (s.localId) for (const child of rows) if (child.parentLocalId === s.localId) add(child, level + 1)
+  }
+  for (const r of rows) if (!isNested(r)) add(r, 0)
+  // Rows left over can only be a parent loop; list them flat rather than drop them.
+  for (const r of rows) add(r, 0)
+  return out
+}
+
 let isScanning = false
 
 async function refresh($: EngineInterface) {
@@ -164,8 +183,12 @@ export const register: Register = on => {
       rows: data.sessions.filter(s => s.state === state || (state === 'waiting' && s.state === 'fresh')),
     })).filter(g => g.rows.length > 0)
 
-    const row = (s: SessionRow) => {
+    const row = ({ s, level }: { s: SessionRow; level: number }) => {
       const isBusy = s.state === 'working' || s.state === 'stalled'
+      // Nested under its parent: an arrow before the title. Parent listed in another section: a line naming it.
+      const arrow = level > 0 ? `${' '.repeat((level - 1) * 2)}↳` : undefined
+      const from = level === 0 && s.parentTitle ? cut(s.parentTitle, titleMax + 2) : undefined
+      const max = Math.max(TITLE_MIN, titleMax - (arrow ? arrow.length + 1 : 0))
       const tag = badge(s, now)
       // ✓ marks the session done (it moves to "Done"), ↺ brings it back.
       const canMark = s.state === 'waiting' || s.state === 'fresh' || s.state === 'done' || s.state === 'archived'
@@ -179,11 +202,16 @@ export const register: Register = on => {
                 {tag.text}
               </Text>
             </Box>
+            {arrow ? (
+              <Box flexShrink={0}>
+                <Text dimColor>{arrow}</Text>
+              </Box>
+            ) : null}
             {/* The desktop app draws only a Button's label; the box grows so the ✓ buttons line up on the right. */}
             <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
               <Button
                 key={`open-${s.id}`}
-                label={cut(s.title, titleMax) ?? s.title}
+                label={cut(s.title, max) ?? s.title}
                 variant={s.id === selfId ? 'primary' : undefined}
                 dimColor={s.id !== selfId && (s.state === 'done' || s.state === 'archived')}
                 onPress={() => openSession($, s.localId)}
@@ -200,6 +228,13 @@ export const register: Register = on => {
               </Box>
             ) : null}
           </Box>
+          {from ? (
+            <Box flexDirection="row" paddingLeft={BADGE_WIDTH + 1}>
+              <Text size="footnote" dimColor>
+                ↳ from {from}
+              </Text>
+            </Box>
+          ) : null}
           {isBusy && (s.progress?.total || s.background) ? (
             <Box flexDirection="row" gap={1} paddingLeft={BADGE_WIDTH + 1}>
               {s.progress && s.progress.total > 0 ? (
@@ -245,7 +280,7 @@ export const register: Register = on => {
                 </Text>
                 <Text dimColor>{g.rows.length}</Text>
               </Box>
-              {shown.map(row)}
+              {arrange(shown).map(row)}
               {isRecent && hidden > 0 && (
                 <Button
                   key="more-recent"

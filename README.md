@@ -13,6 +13,10 @@ Sessions are grouped by what they need from you:
 | **Recent** | Finished sessions you have already looked at. Only the last 5 hours are shown; older ones are behind *Show older*. |
 | **Done** | Sessions you marked with ✓. Collapsed by default. A done session comes back on its own as soon as a new message appears in it. ↺ brings it back by hand. |
 
+A session started by another session (or forked from one) is listed right under its parent with a
+`↳` when both are in the same section. When the parent is in another section, the sub-session
+stays where its own state puts it, with a `↳ from …` line naming the parent.
+
 Click a session's title to jump to it. The session you are in is highlighted.
 The panel refreshes every 5 seconds and covers sessions active in the last 24 hours.
 
